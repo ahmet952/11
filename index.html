@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Günlük Planlayıcı</title>
-
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-
+  
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -29,13 +29,30 @@
 
   <button id="clear-all">Hepsini Sil</button>
 
+  <!-- Uyarı kutusu -->
   <div id="confirm-box" class="hidden">
     <p>Tüm görevleri silmek istediğine emin misin?</p>
     <button id="confirm-yes">Evet</button>
     <button id="confirm-no">Hayır</button>
   </div>
 
+  <!-- Ses dosyası -->
   <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
+
+  <!-- Sesi Etkinleştir Butonu -->
+  <button id="enable-sound" style="
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 10px 15px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  ">🔊 Sesi Etkinleştir</button>
 
   <script src="script.js"></script>
 </body>
