@@ -1,16 +1,8 @@
-// Firebase config ve init
-const firebaseConfig = {
-  apiKey: "AIzaSyAwFWM-YqQBuvjvAQ3dMFbPhSgOHuvyAqk",
-  authDomain: "plan-bd9d8.firebaseapp.com",
-  projectId: "plan-bd9d8",
-  storageBucket: "plan-bd9d8.firebasestorage.app",
-  messagingSenderId: "501991214743",
-  appId: "1:501991214743:web:4e6d5deacba7b4ffa363d2",
-  measurementId: "G-B4P9EDH14F"
-};
-
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+// Firebase yapılandırman varsa buraya ekle (isteğe bağlı)
+// Örneğin:
+// const firebaseConfig = { ... };
+// firebase.initializeApp(firebaseConfig);
+// const messaging = firebase.messaging();
 
 const clock = document.getElementById("clock");
 const date = document.getElementById("date");
@@ -32,31 +24,28 @@ setInterval(() => {
 
 // Sayfa yüklendiğinde görevleri geri yükle ve alarmları kur
 window.addEventListener("load", () => {
+  izinIstegiVeSesHazirla();
+
   const saved = localStorage.getItem("tasks");
   if (saved) {
     taskList.innerHTML = saved;
 
-    // Her görev için alarm kur
     taskList.querySelectorAll("li").forEach(li => {
-      const timeText = li.querySelector("span").textContent.split(" - ")[0];
-      const descText = li.querySelector("span").textContent.split(" - ")[1];
+      const [time, desc] = li.querySelector("span").textContent.split(" - ");
 
       const now = new Date();
       const taskTime = new Date();
-      const [hour, minute] = timeText.split(":");
-      taskTime.setHours(hour);
-      taskTime.setMinutes(minute);
-      taskTime.setSeconds(0);
+      const [hour, minute] = time.split(":");
+      taskTime.setHours(hour, minute, 0, 0);
 
       const diff = taskTime.getTime() - now.getTime();
       if (diff > 0) {
         setTimeout(() => {
           alarmSound.play().catch(console.error);
 
-          // Bildirim göster (local)
           if (Notification.permission === "granted") {
             new Notification("Görev zamanı!", {
-              body: descText,
+              body: desc,
               icon: "/alarm-icon.png"
             });
           }
@@ -67,7 +56,7 @@ window.addEventListener("load", () => {
 });
 
 // Görev ekleme
-taskForm.addEventListener("submit", function (e) {
+taskForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const time = document.getElementById("task-time").value;
   const desc = document.getElementById("task-desc").value;
@@ -83,13 +72,10 @@ taskForm.addEventListener("submit", function (e) {
   taskList.appendChild(li);
   saveTasks();
 
-  // Alarm kur
   const now = new Date();
   const taskTime = new Date();
   const [hour, minute] = time.split(":");
-  taskTime.setHours(hour);
-  taskTime.setMinutes(minute);
-  taskTime.setSeconds(0);
+  taskTime.setHours(hour, minute, 0, 0);
 
   const diff = taskTime.getTime() - now.getTime();
   if (diff > 0) {
@@ -140,41 +126,40 @@ confirmNo.addEventListener("click", () => {
   confirmBox.classList.add("hidden");
 });
 
-// **Tek seferlik izin isteme ve ses hazırlama**
-window.addEventListener("load", () => {
-  const izinIstendi = localStorage.getItem("izinIstendi");
+// Bildirim izni kontrol ve ses hazırlama fonksiyonu
+function izinIstegiVeSesHazirla() {
+  const izinDurumu = Notification.permission; // "granted", "denied" veya "default"
 
-  if (!izinIstendi) {
-    Notification.requestPermission().then(permission => {
-      localStorage.setItem("izinIstendi", "true");
-
-      if (permission === "granted") {
-        console.log("Bildirim izni verildi.");
-
-        alarmSound.play().then(() => {
-          alarmSound.pause();
-          alarmSound.currentTime = 0;
-          console.log("Ses hazırlandı.");
-        }).catch(() => {
-          console.log("Ses çalma engellendi.");
-        });
-
-        // Firebase Messaging token al
-        const vapidKey = 'BM-DCsqdeK61XRWVFy_xc5m294zJqD65JBC2k0UG1AG5XIUxnBus4MAlA-likjWr37xdIZN7dcm75Z_CW6CbwxY';
-        messaging.getToken({ vapidKey }).then(token => {
-          if (token) {
-            console.log("FCM Token:", token);
-            // Token'ı backend veya localStorage'a kaydedebilirsin
-          } else {
-            console.log("Token alınamadı");
-          }
-        }).catch(console.error);
-
-      } else {
-        console.log("Bildirim izni reddedildi.");
-      }
+  if (izinDurumu === "granted") {
+    console.log("İzin zaten verilmiş.");
+    alarmSound.play().then(() => {
+      alarmSound.pause();
+      alarmSound.currentTime = 0;
+      console.log("Ses hazırlandı.");
+    }).catch(err => {
+      console.log("Ses çalma engellendi:", err);
     });
-  } else {
-    console.log("İzin daha önce soruldu.");
+    return;
   }
-});
+
+  if (izinDurumu === "denied") {
+    console.log("İzin reddedilmiş, izin istenmeyecek.");
+    return;
+  }
+
+  // İzin durumu "default" ise izin iste
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      console.log("Bildirim izni verildi.");
+      alarmSound.play().then(() => {
+        alarmSound.pause();
+        alarmSound.currentTime = 0;
+        console.log("Ses hazırlandı.");
+      }).catch(err => {
+        console.log("Ses çalma engellendi:", err);
+      });
+    } else {
+      console.log("Bildirim izni reddedildi veya iptal edildi.");
+    }
+  });
+}
