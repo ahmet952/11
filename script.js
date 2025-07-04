@@ -1,8 +1,16 @@
-// Firebase yapılandırman varsa buraya ekle (isteğe bağlı)
-// Örneğin:
-// const firebaseConfig = { ... };
-// firebase.initializeApp(firebaseConfig);
-// const messaging = firebase.messaging();
+// --- Firebase config ve init ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAwFWM-YqQBuvjvAQ3dMFbPhSgOHuvyAqk",
+  authDomain: "plan-bd9d8.firebaseapp.com",
+  projectId: "plan-bd9d8",
+  storageBucket: "plan-bd9d8.firebasestorage.app",
+  messagingSenderId: "501991214743",
+  appId: "1:501991214743:web:4e6d5deacba7b4ffa363d2",
+  measurementId: "G-B4P9EDH14F"
+};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
 const clock = document.getElementById("clock");
 const date = document.getElementById("date");
@@ -15,37 +23,42 @@ const confirmYes = document.getElementById("confirm-yes");
 const confirmNo = document.getElementById("confirm-no");
 const clearAll = document.getElementById("clear-all");
 
-// Saat ve tarih güncelle
+const enableBtn = document.getElementById("enable-sound");
+
+// --- Saat ve tarih güncelle ---
 setInterval(() => {
   const now = new Date();
   clock.textContent = now.toLocaleTimeString("tr-TR");
   date.textContent = now.toLocaleDateString("tr-TR");
 }, 1000);
 
-// Sayfa yüklendiğinde görevleri geri yükle ve alarmları kur
+// --- Sayfa yüklendiğinde görevleri geri yükle ve alarmları kur ---
 window.addEventListener("load", () => {
-  izinIstegiVeSesHazirla();
-
   const saved = localStorage.getItem("tasks");
   if (saved) {
     taskList.innerHTML = saved;
 
+    // Her görev için alarm kur
     taskList.querySelectorAll("li").forEach(li => {
-      const [time, desc] = li.querySelector("span").textContent.split(" - ");
+      const timeText = li.querySelector("span").textContent.split(" - ")[0];
+      const descText = li.querySelector("span").textContent.split(" - ")[1];
 
       const now = new Date();
       const taskTime = new Date();
-      const [hour, minute] = time.split(":");
-      taskTime.setHours(hour, minute, 0, 0);
+      const [hour, minute] = timeText.split(":");
+      taskTime.setHours(hour);
+      taskTime.setMinutes(minute);
+      taskTime.setSeconds(0);
 
       const diff = taskTime.getTime() - now.getTime();
       if (diff > 0) {
         setTimeout(() => {
           alarmSound.play().catch(console.error);
 
+          // Bildirim göster (local)
           if (Notification.permission === "granted") {
             new Notification("Görev zamanı!", {
-              body: desc,
+              body: descText,
               icon: "/alarm-icon.png"
             });
           }
@@ -55,8 +68,8 @@ window.addEventListener("load", () => {
   }
 });
 
-// Görev ekleme
-taskForm.addEventListener("submit", (e) => {
+// --- Görev ekleme ---
+taskForm.addEventListener("submit", function (e) {
   e.preventDefault();
   const time = document.getElementById("task-time").value;
   const desc = document.getElementById("task-desc").value;
@@ -72,16 +85,20 @@ taskForm.addEventListener("submit", (e) => {
   taskList.appendChild(li);
   saveTasks();
 
+  // Alarm kur
   const now = new Date();
   const taskTime = new Date();
   const [hour, minute] = time.split(":");
-  taskTime.setHours(hour, minute, 0, 0);
+  taskTime.setHours(hour);
+  taskTime.setMinutes(minute);
+  taskTime.setSeconds(0);
 
   const diff = taskTime.getTime() - now.getTime();
   if (diff > 0) {
     setTimeout(() => {
       alarmSound.play().catch(console.error);
 
+      // Bildirim göster (local)
       if (Notification.permission === "granted") {
         new Notification("Görev zamanı!", {
           body: desc,
@@ -94,24 +111,24 @@ taskForm.addEventListener("submit", (e) => {
   taskForm.reset();
 });
 
-// Görevleri kaydet
+// --- Görevleri kaydet ---
 function saveTasks() {
   localStorage.setItem("tasks", taskList.innerHTML);
 }
 
-// Görev tamamlandı işaretle
+// --- Görev tamamlandı işaretle ---
 function markDone(btn) {
   btn.closest("li").classList.toggle("done");
   saveTasks();
 }
 
-// Görev sil
+// --- Görev sil ---
 function deleteTask(btn) {
   btn.closest("li").remove();
   saveTasks();
 }
 
-// Tümünü sil
+// --- Tüm görevleri sil ---
 clearAll.addEventListener("click", () => {
   confirmBox.classList.remove("hidden");
 });
@@ -126,40 +143,40 @@ confirmNo.addEventListener("click", () => {
   confirmBox.classList.add("hidden");
 });
 
-// Bildirim izni kontrol ve ses hazırlama fonksiyonu
-function izinIstegiVeSesHazirla() {
-  const izinDurumu = Notification.permission; // "granted", "denied" veya "default"
-
-  if (izinDurumu === "granted") {
-    console.log("İzin zaten verilmiş.");
+// --- Ses izni verme (iPhone gibi cihazlarda) ---
+if (enableBtn) {
+  enableBtn.addEventListener("click", () => {
     alarmSound.play().then(() => {
       alarmSound.pause();
       alarmSound.currentTime = 0;
-      console.log("Ses hazırlandı.");
-    }).catch(err => {
-      console.log("Ses çalma engellendi:", err);
+      enableBtn.remove();
+      alert("Ses izni verildi. Artık alarmlar çalacak!");
+    }).catch((err) => {
+      alert("Ses izni alınamadı: " + err);
+      console.error(err);
     });
-    return;
-  }
-
-  if (izinDurumu === "denied") {
-    console.log("İzin reddedilmiş, izin istenmeyecek.");
-    return;
-  }
-
-  // İzin durumu "default" ise izin iste
-  Notification.requestPermission().then(permission => {
-    if (permission === "granted") {
-      console.log("Bildirim izni verildi.");
-      alarmSound.play().then(() => {
-        alarmSound.pause();
-        alarmSound.currentTime = 0;
-        console.log("Ses hazırlandı.");
-      }).catch(err => {
-        console.log("Ses çalma engellendi:", err);
-      });
-    } else {
-      console.log("Bildirim izni reddedildi veya iptal edildi.");
-    }
   });
 }
+
+// --- Bildirim izni iste ve FCM Token al ---
+Notification.requestPermission().then(permission => {
+  if (permission === "granted") {
+    console.log("Bildirim izni verildi.");
+
+    // Firebase Console'dan aldığın VAPID anahtarını buraya koy:
+    const vapidKey = BM-DCsqdeK61XRWVFy_xc5m294zJqD65JBC2k0UG1AG5XIUxnBus4MAlA-likjWr37xdIZN7dcm75Z_CW6CbwxY;
+
+    messaging.getToken({ vapidKey: vapidKey }).then((currentToken) => {
+      if (currentToken) {
+        console.log("FCM Token:", currentToken);
+        // İstersen localStorage veya backend'e kaydet
+      } else {
+        console.log("Token alınamadı.");
+      }
+    }).catch(err => {
+      console.error("Token alma hatası:", err);
+    });
+  } else {
+    console.log("Bildirim izni reddedildi.");
+  }
+});
